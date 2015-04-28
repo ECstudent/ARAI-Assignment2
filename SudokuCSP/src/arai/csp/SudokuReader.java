@@ -15,18 +15,14 @@ import java.io.FileReader;
 
 public class SudokuReader {
 
-	private static final int BOXES_IN_SUDOKU = 81;
+	private String fileName;
 
-	// This is the number of clauses that each sudoku puzzles all have in common
-	private Scanner sc;
-	private String puzzle = null;
-
-	public SudokuReader(Scanner sc) {
-		this.sc = sc;
+	public SudokuReader(String fileName) {
+		this.fileName = fileName;
 	}
 
 	public List<String> readPuzzles() throws IOException {
-		Scanner sc = new Scanner(new FileReader("sudoku_training.txt"));
+		Scanner sc = new Scanner(new FileReader(fileName));
 
 		String line = null;
 
