@@ -44,8 +44,10 @@ public class BruteForce {
 			this.solved = true;
 		}
 		
+		String[] solution = new String[NUMBER_OF_BOXES];
+		
 		if ((varList[depth]) != "0"){
-			String[] solution = recursiveBruteForce(varList, (depth+1));
+			solution = recursiveBruteForce(varList, (depth+1));
 		} else {
 			for (int i = 1; i <= 9; i++){
 				if(this.solved){
@@ -53,7 +55,7 @@ public class BruteForce {
 				}
 				if (possibleSetting(varList, i, depth)){
 					varList[depth] = Integer.toBinaryString(i);
-					String[] solution = recursiveBruteForce(varList, (depth+1));
+					solution = recursiveBruteForce(varList, (depth+1));
 				}
 			}
 		}
