@@ -10,13 +10,24 @@ public class Main {
 
 		try {
 			List<String> puzzles = sr.readPuzzles();
+			int count = 0;
 			for (String puzzle : puzzles) {
-				// time
-				// csp.solve(puzzle);
-				// time
-				// time
+				count++;
+				if (count >= 25) {
+					break;
+				}
+				// run and time CSP Solver
+				long cspStart = System.currentTimeMillis( );
+				//new CSPSolver().solve(puzzle);
+				long cspEnd = System.currentTimeMillis( );
+		        long cspDiff = cspEnd - cspStart;
+
+		        // run and time brute force solver
+				long bruteStart = System.currentTimeMillis( );
 				new BruteForce().solve(puzzle);
-				break;
+				long bruteEnd = System.currentTimeMillis( );
+		        long bruteDiff = bruteEnd - bruteStart;
+		        System.out.println(cspDiff + " " + bruteDiff);
 				// time
 			}
 		} catch (IOException ioe) {

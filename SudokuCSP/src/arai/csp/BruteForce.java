@@ -38,19 +38,19 @@ public class BruteForce {
 		String[] solution = recursiveBruteForce(variables, 0);
 		
 		// print output sudoku
-		for (int i = 0; i < NUMBER_OF_BOXES; i++){
-			System.out.print(solution[i]);
-			if ((i+1)%3 == 0 && (i+1)%9 != 0){
-				System.out.print("|");
-			}
-			if ((i+1)%27 == 0 && i < 70){
-				System.out.println("");
-				System.out.print("-----------");
-			}
-			if ((i+1)%9 == 0){
-				System.out.println("");
-			}
-		}
+//		for (int i = 0; i < NUMBER_OF_BOXES; i++){
+//			System.out.print(solution[i]);
+//			if ((i+1)%3 == 0 && (i+1)%9 != 0){
+//				System.out.print("|");
+//			}
+//			if ((i+1)%27 == 0 && i < 70){
+//				System.out.println("");
+//				System.out.print("-----------");
+//			}
+//			if ((i+1)%9 == 0){
+//				System.out.println("");
+//			}
+//		}
 		
 	}
 
