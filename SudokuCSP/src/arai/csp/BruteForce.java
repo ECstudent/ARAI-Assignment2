@@ -36,29 +36,92 @@ public class BruteForce {
 		createVariableList();
 
 		String[] solution = recursiveBruteForce(variables, 0);
+		
+		// print output sudoku
+		for (int i = 0; i < NUMBER_OF_BOXES; i++){
+			System.out.print(solution[i]);
+			if ((i+1)%3 == 0 && (i+1)%9 != 0){
+				System.out.print("|");
+			}
+			if ((i+1)%27 == 0 && i < 70){
+				System.out.println("");
+				System.out.print("-----------");
+			}
+			if ((i+1)%9 == 0){
+				System.out.println("");
+			}
+		}
+		
 	}
 
 	public String[] recursiveBruteForce(String[] varList, int depth){
-		if (depth > NUMBER_OF_BOXES){
-			this.endSolution = varList;
-			this.solved = true;
-		}
+//		// output incoming sudoku
+//		System.out.println("");
+//		System.out.print("INCOMING AT DEPTH: ");
+//		System.out.println(depth);
+//		for (int i = 0; i < NUMBER_OF_BOXES; i++){
+//			System.out.print(varList[i]);
+//			if ((i+1)%3 == 0 && (i+1)%9 != 0){
+//				System.out.print("|");
+//			}
+//			if ((i+1)%27 == 0 && i < 70){
+//				System.out.println("");
+//				System.out.print("-----------");
+//			}
+//			if ((i+1)%9 == 0){
+//				System.out.println("");
+//			}
+//		}
 		
 		String[] solution = new String[NUMBER_OF_BOXES];
+		for (int i = 0; i < NUMBER_OF_BOXES; i++){
+			solution[i] = varList[i];
+		}
+		
+		if (depth >= NUMBER_OF_BOXES){
+			this.endSolution = varList;
+			this.solved = true;
+			solution = this.endSolution;
+			return solution;
+		}		
 		
 		if ((varList[depth]) != "0"){
 			solution = recursiveBruteForce(varList, (depth+1));
 		} else {
 			for (int i = 1; i <= 9; i++){
 				if(this.solved){
+//					System.out.println("-->SOLVED");
 					return this.endSolution;
 				}
 				if (possibleSetting(varList, i, depth)){
-					varList[depth] = Integer.toBinaryString(i);
+					varList[depth] = Integer.toString(i);
 					solution = recursiveBruteForce(varList, (depth+1));
 				}
+				if(this.solved){
+//					System.out.println("-->SOLVED");
+					return this.endSolution;
+				}
 			}
+			varList[depth] = "0";
+			solution[depth] = "0";
 		}
+		// output returning sudoku
+//		System.out.println("------------>RETURNING---------->");		
+//		System.out.print("FROM DEPTH: ");
+//		System.out.println(depth);
+//		for (int i = 0; i < NUMBER_OF_BOXES; i++){
+//			System.out.print(varList[i]);
+//			if ((i+1)%3 == 0 && (i+1)%9 != 0){
+//				System.out.print("|");
+//			}
+//			if ((i+1)%27 == 0 && i < 70){
+//				System.out.println("");
+//				System.out.print("-----------");
+//			}
+//			if ((i+1)%9 == 0){
+//				System.out.println("");
+//			}
+//		}
 		return solution;
 	}
 	
@@ -72,6 +135,7 @@ public class BruteForce {
 		if(inRegion(varList, number, position)){
 			return false;
 		}
+		
 		return true;
 	}
 	
@@ -79,19 +143,20 @@ public class BruteForce {
 		int rowNo = position/9;
 		int startPosition = rowNo * 9;
 		for (int i = startPosition; i < startPosition+9; i++){
-			if(varList[i] == Integer.toString(number)){
+			if(varList[i].equals(""+number)){
 				return true;
 			}
 		}
-		
+				
 		return false;
 	}
 	
 	public boolean inColumn(String[] varList, int number, int position){
 		int columnNo = position % 9;
-		int startPosition = columnNo;
-		for (int i = startPosition; i <= NUMBER_OF_BOXES; i = i + 9){
-			if(varList[i] == Integer.toString(number)){
+		
+		for (int i = 0; i < 9; i++){
+			int checkPlace = columnNo + i * 9;
+			if(varList[checkPlace].equals(""+number)){
 				return true;
 			}
 		}
@@ -109,7 +174,7 @@ public class BruteForce {
 				int curColumn = (regionLeftColumn + j);
 				int curRow = (regionTopRow + i);
 				int checkPlace = curRow * 9 + curColumn;
-				if(varList[checkPlace] == Integer.toString(number)){
+				if(varList[checkPlace].equals(""+number)){
 					return true;
 				}				
 			}

@@ -15,7 +15,8 @@ public class Main {
 				// csp.solve(puzzle);
 				// time
 				// time
-				// bf.solve(puzzle);
+				new BruteForce().solve(puzzle);
+				break;
 				// time
 			}
 		} catch (IOException ioe) {
