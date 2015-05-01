@@ -97,6 +97,25 @@ public class BruteForce {
 		return false;
 	}
 	
+	public boolean inRegion(String[] varList, int number, int position){
+		int rowNo = position/9;
+		int columnNo = position % 9;
+		int regionTopRow = (rowNo / 3) * 3;
+		int regionLeftColumn = (columnNo / 3) * 3;
+		for (int i = 0; i < 3; i++){
+			for (int j = 0; j < 3; j++){
+				int curColumn = (regionLeftColumn + j);
+				int curRow = (regionTopRow + i);
+				int checkPlace = curRow * 9 + curColumn;
+				if(varList[checkPlace] == Integer.toString(number)){
+					return true;
+				}				
+			}
+		}
+		
+		return false;
+	}
+	
 }
 
 
