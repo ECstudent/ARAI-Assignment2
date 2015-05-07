@@ -20,6 +20,12 @@ public class CSPSolver {
 	public static final int COLUMN = 1;
 	public static final int REGION = 2;
 
+	// Checks if the puzzle has been solved.
+	private boolean isSolved = false;
+
+	// Checks if any of the variables has an empty domain
+	private boolean hasEmptyDomain = false;
+
 	// Used for displaying the puzzle as it is being solved.
 	private long printDelay = 0;
 
@@ -43,8 +49,7 @@ public class CSPSolver {
 	private void initVariables(String puzzle) {
 		variables = new String[NUMBER_OF_BOXES];
 		locs = new HashMap<Integer, String>();
-
-		occurrences = new int[9];
+		// occurrences = new int[10];
 
 		int indexRow = 0;
 		int indexClm = 1;
@@ -56,7 +61,7 @@ public class CSPSolver {
 				variables[index] = "123456789";
 			} else {
 				variables[index] = "" + puzzle.charAt(index);
-				occurrences[Integer.valueOf("" + puzzle.charAt(index))]++;
+				// occurrences[Integer.valueOf("" + puzzle.charAt(index))]++;
 			}
 
 			if (index % NUMBER_OF_REGIONS_IN_ROW == 0) {
@@ -132,19 +137,22 @@ public class CSPSolver {
 	 *            The Sudoku puzzle to be solved.
 	 */
 	public void solve(String puzzle) {
-		long time1 = System.nanoTime();
+
+		isSolved = false;
+		hasEmptyDomain = false;
+
+		// long time1 = System.nanoTime();
 		initVariables(puzzle);
-		System.out.print("t1:");
-		System.out.println((System.nanoTime() - time1) / 1000);
+		// System.out.print("t1:");
+		// System.out.println((System.nanoTime() - time1) / 1000);
 		// System.out.println(solution());
 
 		// printDelay = System.nanoTime();
 
-		time1 = System.nanoTime();
+		// time1 = System.nanoTime();
 		dfSearch(variables.clone(), CHECK_ALL);
-
-		System.out.print("dfsearch:");
-		System.out.println((System.nanoTime() - time1) / 1000);
+		// System.out.print("dfsearch:");
+		// System.out.println((System.nanoTime() - time1) / 1000);
 		// System.out.println(solution());
 	}
 
@@ -177,29 +185,32 @@ public class CSPSolver {
 	 * @return
 	 */
 	private boolean dfSearch(String[] tempVariables, int assigned) {
-		long time1 = System.nanoTime();
+		// long time1 = System.nanoTime();
 		constraintProp(tempVariables, assigned);
+		// System.out.print("cprop:");
+		// System.out.println((System.nanoTime() - time1) / 1000);
 
-		System.out.print("cprop:");
-		System.out.println((System.nanoTime() - time1) / 1000);
-
-		// if (printDelay + 100 < System.nanoTime()) {
+		// if (printDelay + 100000000 < System.nanoTime()) {
 		// System.out.println(getCurrentAssignments(tempVariables));
 		// printDelay = System.nanoTime();
 		// }
 
-		if (hasEmptyDomain(tempVariables))
+		if (hasEmptyDomain) {
+			hasEmptyDomain = false;
 			return false;
+		}
 
-		if (!isSolved(tempVariables)) {
+		if (!isSolved) {
 			int varIndex = singleVarSelection(tempVariables);
-			String[] sortedValues = sortDomainByOccurrence(tempVariables[varIndex].split(SPLIT_ALL));
-			for (int index = 0; index < sortedValues.length; index++) {
-				tempVariables[varIndex] = sortedValues[index];				
-				occurrences[Integer.valueOf(sortedValues[index])]++;
+			// String[] sortedValues =
+			// sortDomainByOccurrence(tempVariables[varIndex]
+			// .split(SPLIT_ALL));
+			for (String value : tempVariables[varIndex].split(SPLIT_ALL)) {
+				tempVariables[varIndex] = value;
+				// occurrences[Integer.valueOf(value)]++;
 				if (dfSearch(tempVariables.clone(), varIndex))
 					return true;
-				occurrences[Integer.valueOf(sortedValues[index])]--;
+				// occurrences[Integer.valueOf(value)]--;
 			}
 			return false;
 		} else {
@@ -219,11 +230,8 @@ public class CSPSolver {
 	 * @return
 	 */
 	private int singleVarSelection(String[] tempVariables) {
-
 		int varIndex = 0;
-
 		int shortest = Integer.MAX_VALUE;
-
 		for (int i = 0; i < NUMBER_OF_BOXES; i++) {
 			if (tempVariables[i].length() > 1
 					&& tempVariables[i].length() < shortest) {
@@ -231,30 +239,51 @@ public class CSPSolver {
 				varIndex = i;
 			}
 		}
-
 		return varIndex;
 	}
 
 	/**
-	 * NOT DONE NEEDS FIXING
+	 * Sorts the domain of the assigned variable by the number of times the
+	 * value in the domain has been assigned in the full puzzle starting with
+	 * the most occurrences.
+	 * 
+	 * SLOW, NOT WORTH USING
+	 * 
 	 * @param unsorted
 	 * @return
 	 */
-	
 	private String[] sortDomainByOccurrence(String[] unsorted) {
+		String tempValue = "";
+		int tempOccur = 0;
+
 		String[] sorted = new String[unsorted.length];
-		
 		int[] occurrenceCount = new int[unsorted.length];
-		
+
+		for (int i = 0; i < sorted.length; i++)
+			sorted[i] = "";
+
 		for (int i = 0; i < unsorted.length; i++) {
 			int value = Integer.valueOf(unsorted[i]);
 			int occurrence = occurrences[value];
-			
+			for (int j = 0; j < unsorted.length; j++) {
+				if (occurrence >= occurrenceCount[j]) {
+					// Sort the occurrences of elements...
+					tempOccur = occurrenceCount[j];
+					occurrenceCount[j] = occurrence;
+					occurrence = tempOccur;
+					// to sort the elements in the domain
+					tempValue = sorted[j];
+					sorted[j] = "" + value;
+					if (tempValue.equals(""))
+						break;
+					value = Integer.valueOf(tempValue);
+				}
+			}
 		}
-		
+
 		return sorted;
 	}
-	
+
 	/**
 	 * Loop through all boxes and check all three main constraints. Continue
 	 * until no variable domains can be further reduced. This indicates either
@@ -263,10 +292,23 @@ public class CSPSolver {
 	 */
 	private void constraintProp(String[] tempVariables, int assigned) {
 		boolean reduced = false;
+		boolean solved = true;
 
 		for (int index = 0; index < NUMBER_OF_BOXES; index++) {
-			if (tempVariables[index].length() == 1)
+			int varLength = tempVariables[index].length();
+
+			// Only has one value in its domain
+			if (varLength == 1)
 				continue;
+
+			// Occurrence of empty domain, terminate propagation
+			if (varLength == 0) {
+				hasEmptyDomain = true;
+				return;
+			}
+
+			// Not all variables have been assigned values
+			solved = false;
 
 			// If not all boxes need to be checked, then enter this if-box to
 			// check if the current box is in the same row/column/region. If it
@@ -286,8 +328,6 @@ public class CSPSolver {
 					continue;
 			}
 
-			int varLength = tempVariables[index].length();
-
 			basicConstraints(ROW, index, tempVariables);
 			basicConstraints(COLUMN, index, tempVariables);
 			basicConstraints(REGION, index, tempVariables);
@@ -299,38 +339,8 @@ public class CSPSolver {
 
 		if (reduced)
 			constraintProp(tempVariables, assigned);
-	}
-
-	/**
-	 * Check if the puzzle has been fully solved. A puzzle has been solved if
-	 * for all variables the domain has been reduced to a length of 1.
-	 * 
-	 * @param tempVariables
-	 * @return
-	 */
-	public boolean isSolved(String[] tempVariables) {
-		for (String var : tempVariables) {
-			if (var.length() == 1)
-				continue;
-			return false;
-		}
-		return true;
-	}
-
-	/**
-	 * Check if the current assignment contains a variable with no possible
-	 * assignments (an empty domain).
-	 * 
-	 * @param tempVariables
-	 * @return
-	 */
-	public boolean hasEmptyDomain(String[] tempVariables) {
-		for (String var : tempVariables) {
-			if (!var.isEmpty())
-				continue;
-			return true;
-		}
-		return false;
+		else
+			isSolved = solved;
 	}
 
 	/**
@@ -341,7 +351,7 @@ public class CSPSolver {
 	public String solution() {
 		String solution = "";
 
-		if (isSolved(variables)) {
+		if (isSolved) {
 			solution += "Solution is shown below.\n";
 		} else {
 			solution += "Not (yet) solved. See original puzzle below.\n";
