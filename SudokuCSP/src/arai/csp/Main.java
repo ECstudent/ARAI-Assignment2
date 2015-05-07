@@ -21,7 +21,7 @@ public class Main {
 			int count = 0;
 
 			for (String puzzle : puzzles) {
-				if (++count > 25)
+				if (++count > 1000)
 					break;
 
 				// run and time CSP Solver
