@@ -12,10 +12,6 @@ public class CSPSolver {
 	public static final int NUMBER_OF_REGIONS_IN_CLM = 3;
 	public static final int NUMBER_OF_BOXES = 81;
 
-	public static final String SPLIT_ALL = "(?!^)";
-
-	public static final int CHECK_ALL = -1;
-
 	public static final int ROW = 0;
 	public static final int COLUMN = 1;
 	public static final int REGION = 2;
@@ -26,8 +22,11 @@ public class CSPSolver {
 	// A String array containing the domains for all variables
 	private String[] variables;
 
+	// The Sudoku puzzle to be solved, unassigned variables are denoted with a
+	// point ('.').
+	private String puzzle;
+
 	// Used to compute the row and column of each variable
-	@Deprecated
 	private final int[] MULTIPLE_OF_NINE = new int[] { 9, 18, 27, 36, 45, 54,
 			63, 72, 81 };
 
@@ -42,7 +41,7 @@ public class CSPSolver {
 	 * 
 	 * Compute the row and column of each variable.
 	 */
-	private void initVariables(String puzzle) {
+	private void initVariables() {
 		variables = new String[NUMBER_OF_BOXES];
 		locs = new HashMap<Integer, String>();
 
@@ -71,6 +70,8 @@ public class CSPSolver {
 			}
 			locs.put(index, indexRow + "" + indexClm + "" + indexReg);
 		}
+
+		System.out.println(solution());
 	}
 
 	/**
@@ -119,25 +120,25 @@ public class CSPSolver {
 	 * @param tempVariables
 	 */
 	private void basicConstraints(int type, int index, String[] tempVariables) {
-		int loc = Integer.valueOf(locs.get(index).split(SPLIT_ALL)[type]);
+		int loc = Integer.valueOf(locs.get(index).split("(?!^)")[type]);
 
 		// Check the actual constraints...
 		// If a possible value in the variables domain has already been
 		// assigned to another variable in the same ROW, COLUMN or REGION,
 		// then it can't possibly be assigned to the current variable and
 		// must, therefore, be removed from its domain.
-		for (String value : tempVariables[index].split(SPLIT_ALL)) {
+		for (String value : tempVariables[index].split("(?!^)")) {
 			for (int box = 0; box < NUMBER_OF_BOXES; box++) {
-				// We only need to check with boxes that have assigned values.
-				if (tempVariables[box].length() != 1)
-					continue;
-
 				int boxLoc = Integer
-						.valueOf(locs.get(box).split(SPLIT_ALL)[type]);
+						.valueOf(locs.get(box).split("(?!^)")[type]);
 
 				// Ignore itself and other boxes not in the same ROW, COLUMN or
 				// REGION.
 				if (boxLoc != loc || index == box)
+					continue;
+
+				// We only need to check with boxes that have assigned values.
+				if (tempVariables[box].length() != 1)
 					continue;
 
 				// Remove the value if it has already been assigned to another
@@ -158,16 +159,15 @@ public class CSPSolver {
 	 *            The Sudoku puzzle to be solved.
 	 */
 	public void solve(String puzzle) {
+		this.puzzle = puzzle;
 
-		initVariables(puzzle);
+		initVariables();
 
-		// System.out.println(solution());
+		printDelay = System.currentTimeMillis();
 
-		// printDelay = System.currentTimeMillis();
+		dfSearch(variables.clone());
 
-		dfSearch(variables.clone(), CHECK_ALL);
-
-		// System.out.println(solution());
+		System.out.println(solution());
 	}
 
 	/**
@@ -192,29 +192,24 @@ public class CSPSolver {
 	 * level and try the next variable value there, etc.
 	 * 
 	 * @param tempVariables
-	 * @param assigned
-	 *            Has a value of -1 if the constraints for all boxes need to be
-	 *            checked. Otherwise has a value between 0 and NUMBER_OF_BOXES -
-	 *            1.
 	 * @return
 	 */
-	private boolean dfSearch(String[] tempVariables, int assigned) {
+	private boolean dfSearch(String[] tempVariables) {
 
-		constraintProp(tempVariables, assigned);
-
-		// if (printDelay + 100 < System.currentTimeMillis()) {
-		// System.out.println(getCurrentAssignments(tempVariables));
-		// printDelay = System.currentTimeMillis();
-		// }
+		constraintProp(tempVariables);
 
 		if (hasEmptyDomain(tempVariables))
 			return false;
 
 		if (!isSolved(tempVariables)) {
 			int varIndex = singleVarSelection(tempVariables);
-			for (String value : tempVariables[varIndex].split(SPLIT_ALL)) {
+			for (String value : tempVariables[varIndex].split("(?!^)")) {
 				tempVariables[varIndex] = value;
-				if (dfSearch(tempVariables.clone(), varIndex))
+				if (printDelay + 100 < System.currentTimeMillis()) {
+					System.out.println(getCurrentAssignments(tempVariables));
+					printDelay = System.currentTimeMillis();
+				}
+				if (dfSearch(tempVariables.clone()))
 					return true;
 			}
 			return false;
@@ -311,30 +306,12 @@ public class CSPSolver {
 	 * that the puzzle has been solved or that more advanced solving techniques
 	 * are necessary to complete it.
 	 */
-	private void constraintProp(String[] tempVariables, int assigned) {
+	private void constraintProp(String[] tempVariables) {
 		boolean reduced = false;
 
 		for (int index = 0; index < NUMBER_OF_BOXES; index++) {
 			if (tempVariables[index].length() == 1)
 				continue;
-
-			// If not all boxes need to be checked, then enter this if-box to
-			// check if the current box is in the same row/column/region. If it
-			// is, check it, if not, then move to the next box, etc.
-			if (assigned != CHECK_ALL) {
-				String[] loc = locs.get(assigned).split(SPLIT_ALL);
-				String[] boxLoc = locs.get(index).split(SPLIT_ALL);
-
-				int row = Integer.valueOf(loc[ROW]);
-				int boxRow = Integer.valueOf(boxLoc[ROW]);
-				int clm = Integer.valueOf(loc[COLUMN]);
-				int boxClm = Integer.valueOf(boxLoc[COLUMN]);
-				int reg = Integer.valueOf(loc[REGION]);
-				int boxReg = Integer.valueOf(boxLoc[REGION]);
-
-				if (row != boxRow && clm != boxClm && reg != boxReg)
-					continue;
-			}
 
 			int varLength = tempVariables[index].length();
 
@@ -348,7 +325,7 @@ public class CSPSolver {
 		}
 
 		if (reduced)
-			constraintProp(tempVariables, assigned);
+			constraintProp(tempVariables);
 	}
 
 	/**
@@ -431,7 +408,7 @@ public class CSPSolver {
 
 		for (int index = 0; index < NUMBER_OF_BOXES; index++) {
 			if (index == 0) {
-				solution += tempVariables[index] + " ";
+				solution += tempVariables[index];
 				continue;
 			}
 			if (index % NUMBER_OF_REGIONS_IN_ROW == 0) {
@@ -444,7 +421,7 @@ public class CSPSolver {
 					}
 				}
 			}
-			solution += tempVariables[index] + " ";
+			solution += tempVariables[index];
 		}
 
 		return solution + "|\n";
