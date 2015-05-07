@@ -26,10 +26,8 @@ public class CSPSolver {
 	// A String array containing the domains for all variables
 	private String[] variables;
 
-	// Used to compute the row and column of each variable
-	@Deprecated
-	private final int[] MULTIPLE_OF_NINE = new int[] { 9, 18, 27, 36, 45, 54,
-			63, 72, 81 };
+	// An int array containing the number of assigned occurrences for each value
+	private int[] occurrences;
 
 	// Holds the coordinates of all variables
 	// The value is formatted as "rowcolumnregion", e.g., "142" would be the
@@ -46,6 +44,8 @@ public class CSPSolver {
 		variables = new String[NUMBER_OF_BOXES];
 		locs = new HashMap<Integer, String>();
 
+		occurrences = new int[9];
+
 		int indexRow = 0;
 		int indexClm = 1;
 		int indexReg = 0;
@@ -56,6 +56,7 @@ public class CSPSolver {
 				variables[index] = "123456789";
 			} else {
 				variables[index] = "" + puzzle.charAt(index);
+				occurrences[Integer.valueOf("" + puzzle.charAt(index))]++;
 			}
 
 			if (index % NUMBER_OF_REGIONS_IN_ROW == 0) {
@@ -71,33 +72,6 @@ public class CSPSolver {
 			}
 			locs.put(index, indexRow + "" + indexClm + "" + indexReg);
 		}
-	}
-
-	/**
-	 * Compute the location of the given variable in the Sudoku puzzle.
-	 * 
-	 * @param index
-	 *            The index of the current variable in the variables array.
-	 * @return A String containing the row and column of the variable, separated
-	 *         by a comma.
-	 */
-	@Deprecated
-	private String computeLoc(int index) {
-		int column = 0;
-		int row = 0;
-
-		for (int i = 0; i < MULTIPLE_OF_NINE.length; i++) {
-			int temp = MULTIPLE_OF_NINE[i] - (index + 1);
-
-			if (temp < 0)
-				continue;
-
-			column = 9 - temp;
-			row = i + 1;
-			break;
-		}
-
-		return row + "," + column;
 	}
 
 	/**
@@ -158,15 +132,19 @@ public class CSPSolver {
 	 *            The Sudoku puzzle to be solved.
 	 */
 	public void solve(String puzzle) {
-
+		long time1 = System.nanoTime();
 		initVariables(puzzle);
-
+		System.out.print("t1:");
+		System.out.println((System.nanoTime() - time1) / 1000);
 		// System.out.println(solution());
 
-		// printDelay = System.currentTimeMillis();
+		// printDelay = System.nanoTime();
 
+		time1 = System.nanoTime();
 		dfSearch(variables.clone(), CHECK_ALL);
 
+		System.out.print("dfsearch:");
+		System.out.println((System.nanoTime() - time1) / 1000);
 		// System.out.println(solution());
 	}
 
@@ -199,12 +177,15 @@ public class CSPSolver {
 	 * @return
 	 */
 	private boolean dfSearch(String[] tempVariables, int assigned) {
-
+		long time1 = System.nanoTime();
 		constraintProp(tempVariables, assigned);
 
-		// if (printDelay + 100 < System.currentTimeMillis()) {
+		System.out.print("cprop:");
+		System.out.println((System.nanoTime() - time1) / 1000);
+
+		// if (printDelay + 100 < System.nanoTime()) {
 		// System.out.println(getCurrentAssignments(tempVariables));
-		// printDelay = System.currentTimeMillis();
+		// printDelay = System.nanoTime();
 		// }
 
 		if (hasEmptyDomain(tempVariables))
@@ -212,10 +193,13 @@ public class CSPSolver {
 
 		if (!isSolved(tempVariables)) {
 			int varIndex = singleVarSelection(tempVariables);
-			for (String value : tempVariables[varIndex].split(SPLIT_ALL)) {
-				tempVariables[varIndex] = value;
+			String[] sortedValues = sortDomainByOccurrence(tempVariables[varIndex].split(SPLIT_ALL));
+			for (int index = 0; index < sortedValues.length; index++) {
+				tempVariables[varIndex] = sortedValues[index];				
+				occurrences[Integer.valueOf(sortedValues[index])]++;
 				if (dfSearch(tempVariables.clone(), varIndex))
 					return true;
+				occurrences[Integer.valueOf(sortedValues[index])]--;
 			}
 			return false;
 		} else {
@@ -252,59 +236,25 @@ public class CSPSolver {
 	}
 
 	/**
-	 * Heuristic used for variable selection.
-	 * 
-	 * All variables are ordered by the length of their domain, short-to-long.
-	 * Elements in the variables domain are chosen left-to-right (no heuristic).
-	 * 
-	 * @param tempVariables
+	 * NOT DONE NEEDS FIXING
+	 * @param unsorted
 	 * @return
 	 */
-	@Deprecated
-	private int[] varSelection(String[] tempVariables) {
-
-		int varLength = 0;
-		int varIndex = 0;
-		int tempVarLength = 0;
-		int tempVarIndex = 0;
-
-		int[] lengthSort = new int[NUMBER_OF_BOXES];
-		int[] indexSort = new int[NUMBER_OF_BOXES];
-
-		// 16 was chosen because it is the smallest value larger than the
-		// maximum domain length that requires a single bit-flip
-		for (int i = 0; i < NUMBER_OF_BOXES; i++) {
-			lengthSort[i] = 16;
-			indexSort[i] = 0;
+	
+	private String[] sortDomainByOccurrence(String[] unsorted) {
+		String[] sorted = new String[unsorted.length];
+		
+		int[] occurrenceCount = new int[unsorted.length];
+		
+		for (int i = 0; i < unsorted.length; i++) {
+			int value = Integer.valueOf(unsorted[i]);
+			int occurrence = occurrences[value];
+			
 		}
-
-		for (int i = 0; i < NUMBER_OF_BOXES; i++) {
-			varLength = tempVariables[i].length();
-
-			if (varLength < 2)
-				continue;
-
-			varIndex = i;
-			for (int index = 0; index < NUMBER_OF_BOXES; index++) {
-				if (varLength < lengthSort[index]) {
-					// sorting by length of domain is used...
-					tempVarLength = lengthSort[index];
-					lengthSort[index] = varLength;
-					varLength = tempVarLength;
-					// ...to sort index of variables
-					tempVarIndex = indexSort[index];
-					indexSort[index] = varIndex;
-					varIndex = tempVarIndex;
-				}
-				// stop current loop when the end of the valid values is reached
-				if (varLength == 16)
-					break;
-			}
-		}
-
-		return indexSort;
+		
+		return sorted;
 	}
-
+	
 	/**
 	 * Loop through all boxes and check all three main constraints. Continue
 	 * until no variable domains can be further reduced. This indicates either
