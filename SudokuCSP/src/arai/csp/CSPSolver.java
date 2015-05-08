@@ -38,11 +38,14 @@ public class CSPSolver {
 	// An int array containing the number of assigned occurrences for each value
 	private int[] occurrences;
 
-	// First index signifies the variable (zero-indexed). The second index refers
-	// to either the ROW, COLUMN or REGION. The last index holds the index of its peers.
+	// First index signifies the variable (zero-indexed). The second index
+	// refers
+	// to either the ROW, COLUMN or REGION. The last index holds the index of
+	// its peers.
 	private int[][][] peers;
-	
-	// Contains all peers of each box without duplicates (otherwise region peers cause
+
+	// Contains all peers of each box without duplicates (otherwise region peers
+	// cause
 	// overlap with row and column peers)
 	private int[][] peersAll;
 
@@ -51,7 +54,8 @@ public class CSPSolver {
 	}
 
 	/**
-	 * Set the peers (boxes in the same ROW, COLUMN or REGION) for each variable (box).
+	 * Set the peers (boxes in the same ROW, COLUMN or REGION) for each variable
+	 * (box).
 	 * 
 	 */
 	private void setPeers() {
@@ -59,50 +63,51 @@ public class CSPSolver {
 		int peerAll = 0;
 		int rowNo = 0;
 		int clmNo = 0;
-		int regNo = 0;
-		
+
 		peers = new int[NUMBER_OF_BOXES][3][NUMBER_OF_PEERS_PER_ROW];
 		peersAll = new int[NUMBER_OF_BOXES][NUMBER_OF_PEERS_PER_BOX];
-		
+
 		for (int i = 0; i < NUMBER_OF_BOXES; i++)
 			for (int j = 0; j < NUMBER_OF_PEERS_PER_BOX; j++)
 				peersAll[i][j] = -1;
-		
+
 		for (int i = 0; i < NUMBER_OF_BOXES; i++) {
 			// Set ROWS
+			peerAll = 0;
 			peer = 0;
 			rowNo = i / NUMBER_OF_BOXES_IN_ROW;
 			int posRow = rowNo * NUMBER_OF_BOXES_IN_ROW;
-			for (int j = posRow; j < posRow + NUMBER_OF_BOXES_IN_ROW; j++, peer++) {
-				//Exclude self from peers
+			for (int j = posRow; j < posRow + NUMBER_OF_BOXES_IN_ROW; j++) {
+				// Exclude self from peers
 				if (j == i)
 					continue;
-				peers[i][ROW][peer] = j;
+				peers[i][ROW][peer++] = j;
 				peersAll[i][peerAll++] = j;
 			}
 			// Set COLUMNS
+			peer = 0;
 			clmNo = i % NUMBER_OF_BOXES_IN_CLM;
 			for (int j = 0; j < NUMBER_OF_BOXES_IN_CLM; j++) {
 				int posClm = clmNo + (j * NUMBER_OF_BOXES_IN_CLM);
-				//Exclude self from peers
+				// Exclude self from peers
 				if (posClm == i)
 					continue;
-				peers[i][CLM][j] = posClm;
+				peers[i][COLUMN][peer++] = posClm;
 				peersAll[i][peerAll++] = posClm;
 			}
 			// Set REGIONS
 			peer = 0;
 			int regionRow = (rowNo / 3) * 3;
 			int regionColumn = (clmNo / 3) * 3;
-			for (int j = 0 j < (NUMBER_OF_BOXES_IN_REG / 3); j++) {
-				for (int k = 0 k < (NUMBER_OF_BOXES_IN_REG / 3); k++) {
+			for (int j = 0; j < (NUMBER_OF_BOXES_IN_REG / 3); j++) {
+				for (int k = 0; k < (NUMBER_OF_BOXES_IN_REG / 3); k++) {
 					int curClm = (regionColumn + k);
 					int curRow = (regionRow + j);
 					int posReg = (curRow * NUMBER_OF_BOXES_IN_REG) + curClm;
-					//Exclude self from peers
+					// Exclude self from peers
 					if (posReg == i)
 						continue;
-					peers[i][REG][peer++] = posReg;
+					peers[i][REGION][peer++] = posReg;
 					// Avoid duplicates in peersAll array
 					if (curRow != rowNo && curClm != clmNo)
 						peersAll[i][peerAll++] = posReg;
@@ -118,19 +123,14 @@ public class CSPSolver {
 	 */
 	private void initVariables(String puzzle) {
 		variables = new String[NUMBER_OF_BOXES];
-		//occurrences = new int[10];
+		// occurrences = new int[10];
 
-		int indexRow = 0;
-		int indexClm = 1;
-		int indexReg = 0;
-		int regCount = -NUMBER_OF_REGIONS_IN_ROW;
-
-		for (int index = 0; index < NUMBER_OF_BOXES; index++, indexClm++) {
+		for (int index = 0; index < NUMBER_OF_BOXES; index++) {
 			if (puzzle.charAt(index) == '.') {
 				variables[index] = "123456789";
 			} else {
 				variables[index] = "" + puzzle.charAt(index);
-				//occurrences[Integer.valueOf("" + puzzle.charAt(index))]++;
+				// occurrences[Integer.valueOf("" + puzzle.charAt(index))]++;
 			}
 		}
 	}
@@ -161,8 +161,11 @@ public class CSPSolver {
 		// must, therefore, be removed from its domain.
 		for (String value : tempVariables[index].split(SPLIT_ALL)) {
 			for (int i = 0; i < NUMBER_OF_PEERS_PER_ROW; i++) {
-				if (tempVariables[peers[index][type][i]].contains(value)) {
-					tempVariables[index] = tempVariables[index].replace(value, "");
+				String peerValues = tempVariables[peers[index][type][i]];
+
+				if (peerValues.length() == 1 && peerValues.contains(value)) {
+					tempVariables[index] = tempVariables[index].replace(value,
+							"");
 				}
 			}
 		}
@@ -193,7 +196,7 @@ public class CSPSolver {
 		dfSearch(variables.clone(), CHECK_ALL);
 		// System.out.print("dfsearch:");
 		// System.out.println((System.nanoTime() - time1) / 1000);
-		// System.out.println(solution());
+		System.out.println(solution());
 	}
 
 	/**
@@ -225,18 +228,19 @@ public class CSPSolver {
 	 * @return
 	 */
 	private boolean dfSearch(String[] tempVariables, int assigned) {
-		// long time1 = System.nanoTime();
+		 long time1 = System.nanoTime();
 		constraintProp(tempVariables, assigned);
-		// System.out.print("cprop:");
-		// System.out.println((System.nanoTime() - time1) / 1000);
+		 System.out.print("cprop:");
+		 System.out.println((System.nanoTime() - time1) / 1000);
 
 		// if (printDelay + 100000000 < System.nanoTime()) {
-		// System.out.println(getCurrentAssignments(tempVariables));
+		 System.out.println(getCurrentAssignments(tempVariables));
 		// printDelay = System.nanoTime();
 		// }
 
 		if (hasEmptyDomain) {
 			hasEmptyDomain = false;
+			System.out.println("returned1");
 			return false;
 		}
 
@@ -246,21 +250,25 @@ public class CSPSolver {
 			// String[] sortedValues =
 			// sortDomainByOccurrence(tempVariables[varIndex]
 			// .split(SPLIT_ALL));
-			//for (String value : sortedValues) {
-			for (int i = 0; i < domain.length(); i++) {
-				int value = getLeastOccurringValue(varIndex, domain.split(SPLIT_ALL), tempVariables);
+			// for (String value : sortedValues) {
+			while(domain.length() > 0) {
+				int value = getLeastOccurringValue(varIndex,
+						domain.split(SPLIT_ALL), tempVariables);
 				tempVariables[varIndex] = "" + value;
-				//occurrences[Integer.valueOf(value)]++;
-				if (dfSearch(tempVariables.clone(), varIndex))
+				// occurrences[Integer.valueOf(value)]++;
+				if (dfSearch(tempVariables.clone(), varIndex)) {
+					System.out.println("returned2");
 					return true;
-				//occurrences[Integer.valueOf(value)]--;
+				}
+				// occurrences[Integer.valueOf(value)]--;
 				domain = domain.replace("" + value, "");
 			}
+			System.out.println("returned3");
 			return false;
 		} else {
 			variables = tempVariables.clone();
 		}
-
+		System.out.println("returned4");
 		return true;
 	}
 
@@ -333,12 +341,13 @@ public class CSPSolver {
 	 * @param values
 	 * @return
 	 */
-	private int getLeastOccurringValue(int varIndex, String[] values, String[] tempVariables) {
+	private int getLeastOccurringValue(int varIndex, String[] values,
+			String[] tempVariables) {
 		int leastI = Integer.MAX_VALUE;
 		int leastV = 0;
 		int valueCount = 0;
-		
-		for (int i = 0; i < values.length(); i++) {
+
+		for (int i = 0; i < values.length; i++) {
 			valueCount = 0;
 			for (int peer = 0; peer < NUMBER_OF_PEERS_PER_BOX; peer++) {
 				if (tempVariables[peersAll[varIndex][peer]].contains(values[i]))
@@ -346,7 +355,7 @@ public class CSPSolver {
 			}
 			if (valueCount < leastI) {
 				leastI = valueCount;
-				leastV = Integer.valueOf(values[i]).
+				leastV = Integer.valueOf(values[i]);
 			}
 		}
 		return leastV;
@@ -403,15 +412,16 @@ public class CSPSolver {
 					hasEmptyDomain = true;
 					return;
 				}
-				
+
 				// Not all peers have been assigned values
 				peersSolved = false;
-				
+				solved = false;
+
 				basicConstraints(ROW, peer, tempVariables);
 				basicConstraints(COLUMN, peer, tempVariables);
 				basicConstraints(REGION, peer, tempVariables);
 				// more (advanced) constraints...
-				
+
 				if (!reduced && tempVariables[peer].length() < varLength)
 					reduced = true;
 			}
@@ -423,7 +433,7 @@ public class CSPSolver {
 			for (int index = 0; index < NUMBER_OF_BOXES; index++) {
 				if (tempVariables[index].length() == 1)
 					continue;
-				
+
 				// Not all puzzles have been solved
 				solved = false;
 				break;
