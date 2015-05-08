@@ -162,7 +162,6 @@ public class CSPSolver {
 		for (String value : tempVariables[index].split(SPLIT_ALL)) {
 			for (int i = 0; i < NUMBER_OF_PEERS_PER_ROW; i++) {
 				String peerValues = tempVariables[peers[index][type][i]];
-
 				if (peerValues.length() == 1 && peerValues.contains(value)) {
 					tempVariables[index] = tempVariables[index].replace(value,
 							"");
@@ -184,19 +183,13 @@ public class CSPSolver {
 		isSolved = false;
 		hasEmptyDomain = false;
 
-		// long time1 = System.nanoTime();
 		initVariables(puzzle);
-		// System.out.print("t1:");
-		// System.out.println((System.nanoTime() - time1) / 1000);
-		// System.out.println(solution());
 
 		// printDelay = System.nanoTime();
 
-		// time1 = System.nanoTime();
 		dfSearch(variables.clone(), CHECK_ALL);
-		// System.out.print("dfsearch:");
-		// System.out.println((System.nanoTime() - time1) / 1000);
-		System.out.println(solution());
+
+		// System.out.println(solution());
 	}
 
 	/**
@@ -228,19 +221,16 @@ public class CSPSolver {
 	 * @return
 	 */
 	private boolean dfSearch(String[] tempVariables, int assigned) {
-		 long time1 = System.nanoTime();
+
 		constraintProp(tempVariables, assigned);
-		 System.out.print("cprop:");
-		 System.out.println((System.nanoTime() - time1) / 1000);
 
 		// if (printDelay + 100000000 < System.nanoTime()) {
-		 System.out.println(getCurrentAssignments(tempVariables));
+		// System.out.println(getCurrentAssignments(tempVariables));
 		// printDelay = System.nanoTime();
 		// }
 
 		if (hasEmptyDomain) {
 			hasEmptyDomain = false;
-			System.out.println("returned1");
 			return false;
 		}
 
@@ -251,24 +241,20 @@ public class CSPSolver {
 			// sortDomainByOccurrence(tempVariables[varIndex]
 			// .split(SPLIT_ALL));
 			// for (String value : sortedValues) {
-			while(domain.length() > 0) {
+			while (domain.length() > 0) {
 				int value = getLeastOccurringValue(varIndex,
 						domain.split(SPLIT_ALL), tempVariables);
 				tempVariables[varIndex] = "" + value;
 				// occurrences[Integer.valueOf(value)]++;
-				if (dfSearch(tempVariables.clone(), varIndex)) {
-					System.out.println("returned2");
+				if (dfSearch(tempVariables.clone(), varIndex))
 					return true;
-				}
 				// occurrences[Integer.valueOf(value)]--;
 				domain = domain.replace("" + value, "");
 			}
-			System.out.println("returned3");
 			return false;
 		} else {
 			variables = tempVariables.clone();
 		}
-		System.out.println("returned4");
 		return true;
 	}
 
@@ -427,8 +413,8 @@ public class CSPSolver {
 			}
 		}
 
-		// All peers have been assigned values
-		// Check all boxes to see of the full puzzle has been solved
+		// If all peers have been assigned values,
+		// check all boxes to see of the full puzzle has been solved
 		if (peersSolved) {
 			for (int index = 0; index < NUMBER_OF_BOXES; index++) {
 				if (tempVariables[index].length() == 1)
