@@ -12,6 +12,9 @@ public class CSPSolver {
 	public static final int NUMBER_OF_REGIONS_IN_CLM = 3;
 	public static final int NUMBER_OF_BOXES = 81;
 
+	public static final int NUMBER_OF_PEERS_PER_ROW = NUMBER_OF_BOXES_IN_ROW - 1;
+	public static final int NUMBER_OF_PEERS_PER_BOX = 20;
+
 	public static final String SPLIT_ALL = "(?!^)";
 
 	public static final int CHECK_ALL = -1;
@@ -35,11 +38,78 @@ public class CSPSolver {
 	// An int array containing the number of assigned occurrences for each value
 	private int[] occurrences;
 
-	// Holds the coordinates of all variables
-	// The value is formatted as "rowcolumnregion", e.g., "142" would be the
-	// first row, third column and second region
-	// Note: Region numbers are calculated left-to-right, top-to-bottom.
-	private Map<Integer, String> locs;
+	// First index signifies the variable (zero-indexed). The second index refers
+	// to either the ROW, COLUMN or REGION. The last index holds the index of its peers.
+	private int[][][] peers;
+	
+	// Contains all peers of each box without duplicates (otherwise region peers cause
+	// overlap with row and column peers)
+	private int[][] peersAll;
+
+	public CSPSolver() {
+		setPeers();
+	}
+
+	/**
+	 * Set the peers (boxes in the same ROW, COLUMN or REGION) for each variable (box).
+	 * 
+	 */
+	private void setPeers() {
+		int peer = 0;
+		int peerAll = 0;
+		int rowNo = 0;
+		int clmNo = 0;
+		int regNo = 0;
+		
+		peers = new int[NUMBER_OF_BOXES][3][NUMBER_OF_PEERS_PER_ROW];
+		peersAll = new int[NUMBER_OF_BOXES][NUMBER_OF_PEERS_PER_BOX];
+		
+		for (int i = 0; i < NUMBER_OF_BOXES; i++)
+			for (int j = 0; j < NUMBER_OF_PEERS_PER_BOX; j++)
+				peersAll[i][j] = -1;
+		
+		for (int i = 0; i < NUMBER_OF_BOXES; i++) {
+			// Set ROWS
+			peer = 0;
+			rowNo = i / NUMBER_OF_BOXES_IN_ROW;
+			int posRow = rowNo * NUMBER_OF_BOXES_IN_ROW;
+			for (int j = posRow; j < posRow + NUMBER_OF_BOXES_IN_ROW; j++, peer++) {
+				//Exclude self from peers
+				if (j == i)
+					continue;
+				peers[i][ROW][peer] = j;
+				peersAll[i][peerAll++] = j;
+			}
+			// Set COLUMNS
+			clmNo = i % NUMBER_OF_BOXES_IN_CLM;
+			for (int j = 0; j < NUMBER_OF_BOXES_IN_CLM; j++) {
+				int posClm = clmNo + (j * NUMBER_OF_BOXES_IN_CLM);
+				//Exclude self from peers
+				if (posClm == i)
+					continue;
+				peers[i][CLM][j] = posClm;
+				peersAll[i][peerAll++] = posClm;
+			}
+			// Set REGIONS
+			peer = 0;
+			int regionRow = (rowNo / 3) * 3;
+			int regionColumn = (clmNo / 3) * 3;
+			for (int j = 0 j < (NUMBER_OF_BOXES_IN_REG / 3); j++) {
+				for (int k = 0 k < (NUMBER_OF_BOXES_IN_REG / 3); k++) {
+					int curClm = (regionColumn + k);
+					int curRow = (regionRow + j);
+					int posReg = (curRow * NUMBER_OF_BOXES_IN_REG) + curClm;
+					//Exclude self from peers
+					if (posReg == i)
+						continue;
+					peers[i][REG][peer++] = posReg;
+					// Avoid duplicates in peersAll array
+					if (curRow != rowNo && curClm != clmNo)
+						peersAll[i][peerAll++] = posReg;
+				}
+			}
+		}
+	}
 
 	/**
 	 * Initialize the variables and domains.
@@ -48,8 +118,7 @@ public class CSPSolver {
 	 */
 	private void initVariables(String puzzle) {
 		variables = new String[NUMBER_OF_BOXES];
-		locs = new HashMap<Integer, String>();
-		occurrences = new int[10];
+		//occurrences = new int[10];
 
 		int indexRow = 0;
 		int indexClm = 1;
@@ -61,21 +130,8 @@ public class CSPSolver {
 				variables[index] = "123456789";
 			} else {
 				variables[index] = "" + puzzle.charAt(index);
-				 occurrences[Integer.valueOf("" + puzzle.charAt(index))]++;
+				//occurrences[Integer.valueOf("" + puzzle.charAt(index))]++;
 			}
-
-			if (index % NUMBER_OF_REGIONS_IN_ROW == 0) {
-				indexReg++;
-				if (index % NUMBER_OF_BOXES_IN_ROW == 0) {
-					indexRow++;
-					indexClm = 1;
-					if (index
-							% (NUMBER_OF_BOXES_IN_ROW * NUMBER_OF_REGIONS_IN_ROW) == 0)
-						regCount += NUMBER_OF_REGIONS_IN_ROW;
-					indexReg = 1 + regCount;
-				}
-			}
-			locs.put(index, indexRow + "" + indexClm + "" + indexReg);
 		}
 	}
 
@@ -98,32 +154,16 @@ public class CSPSolver {
 	 * @param tempVariables
 	 */
 	private void basicConstraints(int type, int index, String[] tempVariables) {
-		int loc = Integer.valueOf(locs.get(index).split(SPLIT_ALL)[type]);
-
 		// Check the actual constraints...
 		// If a possible value in the variables domain has already been
 		// assigned to another variable in the same ROW, COLUMN or REGION,
 		// then it can't possibly be assigned to the current variable and
 		// must, therefore, be removed from its domain.
 		for (String value : tempVariables[index].split(SPLIT_ALL)) {
-			for (int box = 0; box < NUMBER_OF_BOXES; box++) {
-				// We only need to check with boxes that have assigned values.
-				if (tempVariables[box].length() != 1)
-					continue;
-
-				int boxLoc = Integer
-						.valueOf(locs.get(box).split(SPLIT_ALL)[type]);
-
-				// Ignore itself and other boxes not in the same ROW, COLUMN or
-				// REGION.
-				if (boxLoc != loc || index == box)
-					continue;
-
-				// Remove the value if it has already been assigned to another
-				// variable.
-				if (tempVariables[box].contains(value))
-					tempVariables[index] = tempVariables[index].replace(value,
-							"");
+			for (int i = 0; i < NUMBER_OF_PEERS_PER_ROW; i++) {
+				if (tempVariables[peers[index][type][i]].contains(value)) {
+					tempVariables[index] = tempVariables[index].replace(value, "");
+				}
 			}
 		}
 	}
@@ -202,15 +242,19 @@ public class CSPSolver {
 
 		if (!isSolved) {
 			int varIndex = singleVarSelection(tempVariables);
-			 String[] sortedValues =
-			 sortDomainByOccurrence(tempVariables[varIndex]
-			 .split(SPLIT_ALL));
-			for (String value : sortedValues) {
-				tempVariables[varIndex] = value;
-				 occurrences[Integer.valueOf(value)]++;
+			String domain = tempVariables[varIndex];
+			// String[] sortedValues =
+			// sortDomainByOccurrence(tempVariables[varIndex]
+			// .split(SPLIT_ALL));
+			//for (String value : sortedValues) {
+			for (int i = 0; i < domain.length(); i++) {
+				int value = getLeastOccurringValue(varIndex, domain.split(SPLIT_ALL), tempVariables);
+				tempVariables[varIndex] = "" + value;
+				//occurrences[Integer.valueOf(value)]++;
 				if (dfSearch(tempVariables.clone(), varIndex))
 					return true;
-				 occurrences[Integer.valueOf(value)]--;
+				//occurrences[Integer.valueOf(value)]--;
+				domain = domain.replace("" + value, "");
 			}
 			return false;
 		} else {
@@ -246,8 +290,6 @@ public class CSPSolver {
 	 * Sorts the domain of the assigned variable by the number of times the
 	 * value in the domain has been assigned in the full puzzle starting with
 	 * the most occurrences.
-	 * 
-	 * SLOW, NOT WORTH USING
 	 * 
 	 * @param unsorted
 	 * @return
@@ -285,6 +327,32 @@ public class CSPSolver {
 	}
 
 	/**
+	 * Implementation of least constraining value selection.
+	 * 
+	 * @param varIndex
+	 * @param values
+	 * @return
+	 */
+	private int getLeastOccurringValue(int varIndex, String[] values, String[] tempVariables) {
+		int leastI = Integer.MAX_VALUE;
+		int leastV = 0;
+		int valueCount = 0;
+		
+		for (int i = 0; i < values.length(); i++) {
+			valueCount = 0;
+			for (int peer = 0; peer < NUMBER_OF_PEERS_PER_BOX; peer++) {
+				if (tempVariables[peersAll[varIndex][peer]].contains(values[i]))
+					valueCount++;
+			}
+			if (valueCount < leastI) {
+				leastI = valueCount;
+				leastV = Integer.valueOf(values[i]).
+			}
+		}
+		return leastV;
+	}
+
+	/**
 	 * Loop through all boxes and check all three main constraints. Continue
 	 * until no variable domains can be further reduced. This indicates either
 	 * that the puzzle has been solved or that more advanced solving techniques
@@ -293,48 +361,73 @@ public class CSPSolver {
 	private void constraintProp(String[] tempVariables, int assigned) {
 		boolean reduced = false;
 		boolean solved = true;
+		boolean peersSolved = true;
 
-		for (int index = 0; index < NUMBER_OF_BOXES; index++) {
-			int varLength = tempVariables[index].length();
+		if (assigned == CHECK_ALL) {
+			peersSolved = false;
+			for (int index = 0; index < NUMBER_OF_BOXES; index++) {
+				int varLength = tempVariables[index].length();
 
-			// Only has one value in its domain
-			if (varLength == 1)
-				continue;
-
-			// Occurrence of empty domain, terminate propagation
-			if (varLength == 0) {
-				hasEmptyDomain = true;
-				return;
-			}
-
-			// Not all variables have been assigned values
-			solved = false;
-
-			// If not all boxes need to be checked, then enter this if-box to
-			// check if the current box is in the same row/column/region. If it
-			// is, check it, if not, then move to the next box, etc.
-			if (assigned != CHECK_ALL) {
-				String[] loc = locs.get(assigned).split(SPLIT_ALL);
-				String[] boxLoc = locs.get(index).split(SPLIT_ALL);
-
-				int row = Integer.valueOf(loc[ROW]);
-				int boxRow = Integer.valueOf(boxLoc[ROW]);
-				int clm = Integer.valueOf(loc[COLUMN]);
-				int boxClm = Integer.valueOf(boxLoc[COLUMN]);
-				int reg = Integer.valueOf(loc[REGION]);
-				int boxReg = Integer.valueOf(boxLoc[REGION]);
-
-				if (row != boxRow && clm != boxClm && reg != boxReg)
+				// Only has one value in its domain
+				if (varLength == 1)
 					continue;
+
+				// Occurrence of empty domain, terminate propagation
+				if (varLength == 0) {
+					hasEmptyDomain = true;
+					return;
+				}
+
+				// Not all variables have been assigned values
+				solved = false;
+
+				basicConstraints(ROW, index, tempVariables);
+				basicConstraints(COLUMN, index, tempVariables);
+				basicConstraints(REGION, index, tempVariables);
+				// more (advanced) constraints...
+
+				if (!reduced && tempVariables[index].length() < varLength)
+					reduced = true;
 			}
+		} else {
+			for (int index = 0; index < NUMBER_OF_PEERS_PER_BOX; index++) {
+				int peer = peersAll[assigned][index];
+				int varLength = tempVariables[peer].length();
 
-			basicConstraints(ROW, index, tempVariables);
-			basicConstraints(COLUMN, index, tempVariables);
-			basicConstraints(REGION, index, tempVariables);
-			// more (advanced) constraints...
+				// Only has one value in its domain
+				if (varLength == 1)
+					continue;
 
-			if (!reduced && tempVariables[index].length() < varLength)
-				reduced = true;
+				// Occurrence of empty domain, terminate propagation
+				if (varLength == 0) {
+					hasEmptyDomain = true;
+					return;
+				}
+				
+				// Not all peers have been assigned values
+				peersSolved = false;
+				
+				basicConstraints(ROW, peer, tempVariables);
+				basicConstraints(COLUMN, peer, tempVariables);
+				basicConstraints(REGION, peer, tempVariables);
+				// more (advanced) constraints...
+				
+				if (!reduced && tempVariables[peer].length() < varLength)
+					reduced = true;
+			}
+		}
+
+		// All peers have been assigned values
+		// Check all boxes to see of the full puzzle has been solved
+		if (peersSolved) {
+			for (int index = 0; index < NUMBER_OF_BOXES; index++) {
+				if (tempVariables[index].length() == 1)
+					continue;
+				
+				// Not all puzzles have been solved
+				solved = false;
+				break;
+			}
 		}
 
 		if (reduced)
