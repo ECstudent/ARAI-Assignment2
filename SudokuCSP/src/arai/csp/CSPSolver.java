@@ -49,7 +49,7 @@ public class CSPSolver {
 	private void initVariables(String puzzle) {
 		variables = new String[NUMBER_OF_BOXES];
 		locs = new HashMap<Integer, String>();
-		// occurrences = new int[10];
+		occurrences = new int[10];
 
 		int indexRow = 0;
 		int indexClm = 1;
@@ -61,7 +61,7 @@ public class CSPSolver {
 				variables[index] = "123456789";
 			} else {
 				variables[index] = "" + puzzle.charAt(index);
-				// occurrences[Integer.valueOf("" + puzzle.charAt(index))]++;
+				 occurrences[Integer.valueOf("" + puzzle.charAt(index))]++;
 			}
 
 			if (index % NUMBER_OF_REGIONS_IN_ROW == 0) {
@@ -202,15 +202,15 @@ public class CSPSolver {
 
 		if (!isSolved) {
 			int varIndex = singleVarSelection(tempVariables);
-			// String[] sortedValues =
-			// sortDomainByOccurrence(tempVariables[varIndex]
-			// .split(SPLIT_ALL));
-			for (String value : tempVariables[varIndex].split(SPLIT_ALL)) {
+			 String[] sortedValues =
+			 sortDomainByOccurrence(tempVariables[varIndex]
+			 .split(SPLIT_ALL));
+			for (String value : sortedValues) {
 				tempVariables[varIndex] = value;
-				// occurrences[Integer.valueOf(value)]++;
+				 occurrences[Integer.valueOf(value)]++;
 				if (dfSearch(tempVariables.clone(), varIndex))
 					return true;
-				// occurrences[Integer.valueOf(value)]--;
+				 occurrences[Integer.valueOf(value)]--;
 			}
 			return false;
 		} else {
